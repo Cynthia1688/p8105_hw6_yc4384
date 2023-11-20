@@ -1,0 +1,73 @@
+---
+title: "p8105_hw6_yc4384"
+author: "Yangyang Chen"
+date: "`r Sys.Date()`"
+output: github_document
+---
+```{r, include = FALSE, message = FALSE, warning = FALSE}
+library(tidyverse)
+library(viridis)
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+```
+
+# Problem_1
+```{r library packages, echo=FALSE, results='hide', message=FALSE}
+library(tidyverse)
+```
+This dataset records the crimes solved rate in each state - The Washington Post has gathered data on homicides in 50 large U.S. cities.
+
+## _Data pre-processing_
+
+* Add a character variable `city_state` representing `city` and `state` variables;
+
+* Add a binary variable `resolved` to indicate whether cases were solved or not;
+
+* Limit `victim_race` to `black` and `white` people;
+
+* Filter cities `Tulsa, AL`, `Dallas, TX`, `Phoenix, AZ`, `Kansas City, MO` as they contain NA values;
+
+* Drop NAs to guarantee `victim_age` is numeric.
+
+```{r pre-processing, message=FALSE}
+homicide_df = 
+  read_csv("data/homicide-data.csv", na = c("", "NA", "Unknown")) |> 
+  mutate(
+    city_state = str_c(city, state, sep = ", "),
+    victim_age = as.numeric(victim_age),
+    resolved = as.numeric(disposition == "Closed by arrest")
+  ) |> 
+  filter(victim_race %in% c("Black", "White"),
+         !(city_state %in% c("Tulsa, AL", "Dallas, TX", "Phoenix, AZ", "Kansas City, MO"))) |> 
+  drop_na() |> 
+  select(resolved, victim_age, victim_race, victim_sex, city_state)
+```
+
+## _Fitting Models_
+```{r}
+fit_logistic = 
+  homicide_df |> 
+  filter(city_state == "Baltimore, MD") |> 
+  glm(resolved ~ victim_age + victim_sex + victim_race, data = _, family = binomial()) |> 
+  broom::tidy() |> 
+  mutate(OR = exp(estimate)) |> 
+  select(term, estimate, OR)
+```
+
+
