@@ -32,7 +32,7 @@ theme_set(theme_minimal() + theme(legend.position = "bottom"))
 ```{r library packages, echo=FALSE, results='hide', message=FALSE}
 library(tidyverse)
 ```
-This dataset records the crimes solved rate in each state - The Washington Post has gathered data on homicides in 50 large U.S. cities.
+* This dataset records the crimes solved rate in each state - The Washington Post has gathered data on homicides in 50 large U.S. cities.
 
 ## _Data Pre-processing_
 
@@ -62,7 +62,7 @@ homicide_df =
 
 ## _Fitting Logistics Regression For Baltimore_
 
-I fitted a model using age, sex and race variables to compute odds ratio and confidence interval of solving homicides comparing male victims to female victims keeping all other variables fixed.
+* We fitted a model using age, sex and race variables to compute odds ratio and confidence interval of solving homicides comparing male victims to female victims keeping all other variables fixed.
 
 ```{r Baltimore}
 fit_logistic = 
@@ -80,7 +80,7 @@ fit_logistic
 
 ## _Fitting Logistics Regression For Each City_
 
-Then I used `map` function to obtain each city's Adjusted Odds Ratio and CIs for solving homicides comparing male victims to female victims.
+* Then we used `map` function to obtain each city's Adjusted Odds Ratio and CIs for solving homicides comparing male victims to female victims.
 
 ```{r city}
 city_logistic = 
@@ -126,7 +126,7 @@ city_logistic |>
 ## _Importing weather data_
 
 * Codes are provided by this course:
-```{r weather_data, cache = TRUE}
+```{r weather_df, cache = TRUE}
 weather_df = 
   rnoaa::meteo_pull_monitors(
     c("USW00094728"),
@@ -144,7 +144,7 @@ weather_df =
 
 * To obtain a distribution for $\hat{r}^2$, we'll follow basically the same procedure we used for regression coefficients: draw bootstrap samples; the a model to each; extract the value I'm concerned with; and summarize. Here, we'll use `modelr::bootstrap` to draw the samples and `broom::glance` to produce `r.squared` values. 
 
-```{r eather_df, cache = TRUE}
+```{r beta, cache = TRUE}
 weather_df |> 
   modelr::bootstrap(n = 5000) |> 
   mutate(
@@ -164,7 +164,7 @@ weather_df |>
 
 * We can produce a distribution for $\log(\beta_0 * \beta_1)$ using a similar approach, with a bit more wrangling before we make our plot.
 
-```{r lm}
+```{r log_beta}
 weather_df |> 
   modelr::bootstrap(n = 5000) |> 
   mutate(
@@ -186,3 +186,6 @@ weather_df |>
   
 ```
 
+* As with $r^2$, this distribution is somewhat skewed and has some outliers. 
+
+# _Problem 3_
