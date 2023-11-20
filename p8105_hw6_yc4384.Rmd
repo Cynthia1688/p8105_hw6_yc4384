@@ -7,6 +7,8 @@ output: github_document
 ```{r, include = FALSE, message = FALSE, warning = FALSE}
 library(tidyverse)
 library(viridis)
+library(modelr)
+library(mgcv)
 library(latex2exp)
 
 knitr::opts_chunk$set(
@@ -189,3 +191,125 @@ weather_df |>
 * As with $r^2$, this distribution is somewhat skewed and has some outliers. 
 
 # _Problem 3_
+
+This dataset consists of roughly 4000 children's information and includes 20 variables, and our task is understand the effects of sevral variables on a child's birthweight.
+
+## _Data Pre-processing_
+
+These are character variables that needs to be cleaned first:
+
+* `babysex`: baby’s sex (male = 1, female = 2)
+
+* `frace`: father’s race (1 = White, 2 = Black, 3 = Asian, 4 = Puerto Rican, 8 = Other, 9 = Unknown)
+
+* `malform`: presence of malformations that could affect weight (0 = absent, 1 = present)
+
+* `mrace`: mother’s race (1 = White, 2 = Black, 3 = Asian, 4 = Puerto Rican, 8 = Other)
+
+```{r}
+bwt_df = 
+  read_csv("data/birthweight.csv") |> 
+  mutate(
+    babysex = as.factor(babysex),
+    babysex = recode(babysex, "1" = "Male", "2" = "Female"),
+    frace = as.factor(frace),
+    frace = recode(frace, "1" = "White", "2" = "Black", "3" = "Asian", "4" = "Puerto Rican", "8" = "Other", "9" = "Unknown"),
+    malform = as.factor(malform),
+    malform = recode(malform, "0" = "Absent", "1" = "Present"),
+    mrace = as.factor(mrace),
+    mrace = recode(mrace, "1" = "White", "2" = "Black", "3" = "Asian", "4" = "Puerto Rican", "8" = "Other")
+  )
+
+head(bwt_df)
+
+sum(is.na(bwt_df))
+```
+
+After cleaning and inspecting the dataset, we didn't find any missing data values.
+
+## _Model Construction_
+
+```{r}
+bwt_lm = 
+  lm(bwt ~ babysex + fincome + gaweeks + malform + smoken + wtgain, data = bwt_df)
+
+summary(bwt_lm) 
+```
+
+As p-values < 0.05 (except `malform`), the proposed model is significantly useful.
+
+## _Plotting - residuals vs. fitted values_
+
+* Create a plot of model residuals against fitted values.
+
+```{r}
+bwt_plot = 
+  bwt_df |> 
+  modelr::add_predictions(bwt_lm) |> 
+  modelr::add_residuals(bwt_lm) |> 
+  ggplot(aes(x = pred, y = resid)) +
+  geom_point(alpha = .2) +
+  labs(
+    x = "Fitted Values",
+    y = "Residuals",
+    title = "Residuals vs Fitted Values"
+  )
+
+bwt_plot
+```
+
+## _Cross Validation_
+
+* Comparison of three models using RMSE.
+```{r}
+set.seed(1)
+
+cv_df = 
+  crossv_mc(bwt_df, 100) |> 
+  mutate(
+    main_mod = map(train, \(train) lm(bwt ~ blength + gaweeks, data = train) ),
+    three_mod = map(train, \(train) lm(bwt ~ bhead * blength * babysex, data = train)),
+    proposed_mod = map(train, \(train) lm(bwt ~ babysex + fincome + gaweeks + malform + smoken + wtgain, data = train))
+  ) |> 
+  mutate(
+    rmse_main = map2_dbl(main_mod, test, \(mod, test) rmse(model = mod, data = test)),
+    rmse_three = map2_dbl(three_mod, test, \(mod, test) rmse(model = mod, data = test)),
+    rmse_proposed = map2_dbl(proposed_mod, test, \(mod, test) rmse(model = mod, data = test))
+  )
+
+cv_df
+```
+
+* Finally, plotting the prediction error distribution for each candidate models.
+```{r}
+cv_plot = 
+  cv_df |> 
+  select(starts_with("rmse")) |> 
+  pivot_longer(
+    everything(),
+    names_to = "model",
+    values_to = "rmse",
+    names_prefix = "rmse_"
+  ) |> 
+  mutate(
+    model = recode(model, "main_mod" = "Main Effect Model", "three_mod" = "Three-way Model", "proposed_mod" = "Proposed Model")
+    ) |> 
+  ggplot(aes(x = model, y = rmse)) + 
+  geom_violin() +
+  labs(
+    x = "Models",
+    y = "RMSE",
+    title =  "RMSE Plots of Candidate Models"
+  )
+
+cv_plot
+```
+
+* Above plot shows that the three-way model, which consists of the head circumference, length, sex, and all interactions, has the lowest RMSE among all models, indicates that it is the optimal regression model.
+
+* While the main effect model, consisting of length at birth and gestational age, has a RMSE that is greater than that of three-way model, but less than that of the proposed model. This demonstates that main effect model is the second optimal model.  
+
+* Finally, proposed model has the highest RMSE, illustrating that it is the worst model amoung other three. 
+
+
+
