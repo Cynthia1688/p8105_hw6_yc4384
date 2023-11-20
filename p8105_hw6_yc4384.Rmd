@@ -7,6 +7,7 @@ output: github_document
 ```{r, include = FALSE, message = FALSE, warning = FALSE}
 library(tidyverse)
 library(viridis)
+library(latex2exp)
 
 knitr::opts_chunk$set(
 	echo = TRUE,
@@ -63,7 +64,7 @@ homicide_df =
 
 I fitted a model using age, sex and race variables to compute odds ratio and confidence interval of solving homicides comparing male victims to female victims keeping all other variables fixed.
 
-```{r}
+```{r Baltimore}
 fit_logistic = 
   homicide_df |> 
   filter(city_state == "Baltimore, MD") |> 
@@ -81,7 +82,7 @@ fit_logistic
 
 Then I used `map` function to obtain each city's Adjusted Odds Ratio and CIs for solving homicides comparing male victims to female victims.
 
-```{r}
+```{r city}
 city_logistic = 
   homicide_df |> 
   group_by(city_state)|> 
@@ -107,7 +108,7 @@ city_logistic |>
 
 ## _Plotting for ORs and CIs in Each City_
 
-```{r}
+```{r kogistic}
 city_logistic |> 
   mutate(city_state = fct_reorder(city_state, OR)) |> 
   ggplot(aes(x = OR, y = city_state)) +
@@ -116,7 +117,72 @@ city_logistic |>
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
 
-From the above plot, we observed that Washington, DC has the lowest odds ratio, indicating the lowest resolved homicide cases; while Albuquerque, NM, has the highest odds ratio. Noticing that Fresno, CA has the widest confidence interval of OR among all cities, while Balttimore, MD has the narrowest confidence interval. Overall, there exists plenty of overlapping areas of CIs among all cities.
+* From the above plot, we observed that Washington, DC has the lowest odds ratio, indicating the lowest resolved homicide cases; while Albuquerque, NM, has the highest odds ratio. 
+
+* Noticing that Fresno, CA has the widest confidence interval of OR among all cities, while Balttimore, MD has the narrowest confidence interval. Overall, there exists plenty of overlapping areas of CIs among all cities.
 
 # _Problem 2_
+
+## _Importing weather data_
+
+* Codes are provided by this course:
+```{r weather_data, cache = TRUE}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2022-01-01",
+    date_max = "2022-12-31") |>
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) |>
+  select(name, id, everything())
+```
+
+## _Plotting bootstrap sampling estimators using simple Linear regression model_
+
+* To obtain a distribution for $\hat{r}^2$, we'll follow basically the same procedure we used for regression coefficients: draw bootstrap samples; the a model to each; extract the value I'm concerned with; and summarize. Here, we'll use `modelr::bootstrap` to draw the samples and `broom::glance` to produce `r.squared` values. 
+
+```{r eather_df, cache = TRUE}
+weather_df |> 
+  modelr::bootstrap(n = 5000) |> 
+  mutate(
+    models = map(strap, \(df) lm(tmax ~ tmin + prcp, data = df)),
+    results = map(models, broom::glance) 
+  ) |> 
+  select(results) |> 
+  unnest(results) |> 
+  ggplot(aes(x = r.squared)) +
+  geom_density() +
+  labs(title = TeX("Density Plot of $\\hat{r}^2$"), x = TeX("$\\hat{r}^2$"), y = TeX("Density" )) 
+```
+
+* The above plot shows that $\hat{r}^2$ is high, leading to the generally skewed shape of the density distribution. 
+
+* If we wanted to construct a confidence interval for $R^2$, we could take the 2.5% and 97.5% quantiles of the estimates across bootstrap samples. Nevertheless, since the shape isn't symmetric, using the mean +/- 1.96 times the standard error probably wouldn't work well.
+
+* We can produce a distribution for $\log(\beta_0 * \beta_1)$ using a similar approach, with a bit more wrangling before we make our plot.
+
+```{r lm}
+weather_df |> 
+  modelr::bootstrap(n = 5000) |> 
+  mutate(
+    models = map(strap, \(df) lm(tmax ~ tmin + prcp, data = df)),
+    results = map(models, broom::tidy)
+  ) |> 
+  select(-strap, -models) |> 
+  unnest(results) |> 
+  select(id = ".id", term, estimate) |> 
+  pivot_wider(
+    names_from = term,
+    values_from = estimate
+  ) |> 
+  rename(beta0 = "(Intercept)", beta1 = tmin) |> 
+  mutate(log_beta0_beta1 = log(beta0 * beta1)) |> 
+  ggplot(aes(x = log_beta0_beta1)) +
+  geom_density() +  
+  labs(title = TeX("Density Plot of $\\log(\\beta_0*\\beta_1)$"), x = TeX("$\\log(\\beta_0*\\beta_1)$"), y = TeX("Density" )) 
+  
+```
 
