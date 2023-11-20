@@ -33,7 +33,7 @@ library(tidyverse)
 ```
 This dataset records the crimes solved rate in each state - The Washington Post has gathered data on homicides in 50 large U.S. cities.
 
-## _Data pre-processing_
+## _Data Pre-processing_
 
 * Add a character variable `city_state` representing `city` and `state` variables;
 
@@ -59,7 +59,7 @@ homicide_df =
   select(resolved, victim_age, victim_race, victim_sex, city_state)
 ```
 
-## _Fitting Logistics Regression For Baltimore, MD_
+## _Fitting Logistics Regression For Baltimore_
 
 I fitted a model using age, sex and race variables to compute odds ratio and confidence interval of solving homicides comparing male victims to female victims keeping all other variables fixed.
 
@@ -105,7 +105,7 @@ city_logistic |>
 
 ```
 
-## Plotting for ORs and CIs in Each City
+## _Plotting for ORs and CIs in Each City_
 
 ```{r}
 city_logistic |> 
@@ -118,4 +118,5 @@ city_logistic |>
 
 From the above plot, we observed that Washington, DC has the lowest odds ratio, indicating the lowest resolved homicide cases; while Albuquerque, NM, has the highest odds ratio. Noticing that Fresno, CA has the widest confidence interval of OR among all cities, while Balttimore, MD has the narrowest confidence interval. Overall, there exists plenty of overlapping areas of CIs among all cities.
 
+# _Problem 2_
 
